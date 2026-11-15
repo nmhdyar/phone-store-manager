@@ -1,0 +1,39 @@
+{% extends "base.html" %}
+{% block title %}Dashboard · Phone Store Manager{% endblock %}
+{% block content %}
+<header class="topbar"><div><p class="eyebrow">OVERVIEW</p><h1>Dashboard</h1><p class="subtitle">Your store at a glance.</p></div><div class="top-actions"><a class="btn-primary" href="{{ url_for('add_phone') }}">＋ Add Product</a></div></header>
+<section class="stats-grid">
+  <article class="stat-card"><div class="stat-top"><span>Total Products</span><span class="stat-icon blue">▣</span></div><h2>{{ stats.total_products }}</h2><p class="stat-note">Products in your store</p></article>
+  <article class="stat-card"><div class="stat-top"><span>Total Stock</span><span class="stat-icon purple">▤</span></div><h2>{{ "{:,}".format(stats.total_stock) }}</h2><p class="stat-note">Units available</p></article>
+  <article class="stat-card"><div class="stat-top"><span>Inventory Value</span><span class="stat-icon green">₮</span></div><h2>{{ "{:,.0f}".format(stats.inventory_value) }}</h2><p class="stat-note">Toman · Retail stock value</p></article>
+  <article class="stat-card"><div class="stat-top"><span>Low Stock Items</span><span class="stat-icon orange">!</span></div><h2>{{ stats.low_stock }}</h2><p class="stat-note">At or below {{ threshold }} units</p></article>
+</section>
+<section class="stats-grid stats-secondary">
+  <article class="stat-card"><div class="stat-top"><span>Today's Revenue</span><span class="stat-icon green">↗</span></div><h2>{{ "{:,.0f}".format(sales_today.revenue) }}</h2><p class="stat-note">Toman · {{ sales_today.count }} transactions today</p></article>
+  <article class="stat-card"><div class="stat-top"><span>Today's Gross Profit</span><span class="stat-icon purple">◆</span></div><h2>{{ "{:,.0f}".format(sales_today.profit) }}</h2><p class="stat-note">Toman · Excludes sales with unknown cost</p></article>
+</section>
+<section class="content-grid">
+  <article class="panel"><div class="section-heading"><div><h3>Quick Actions</h3><p>Common tasks, one click away.</p></div></div>
+    <div class="action-list">
+      <a class="action-button" href="{{ url_for('add_phone') }}"><span class="action-icon blue">＋</span><span><strong>Add New Product</strong><small>Create an inventory item</small></span><span class="arrow">→</span></a>
+      <a class="action-button" href="{{ url_for('sales') }}"><span class="action-icon green">↗</span><span><strong>View Sales</strong><small>Revenue and transaction history</small></span><span class="arrow">→</span></a>
+      <a class="action-button" href="{{ url_for('activity') }}"><span class="action-icon purple">◷</span><span><strong>Activity Log</strong><small>Review recent store operations</small></span><span class="arrow">→</span></a>
+    </div>
+  </article>
+  <article class="panel"><div class="section-heading"><div><h3>Smart Alerts</h3><p>Stock that needs attention.</p></div><span class="alert-count">{{ low_stock_phones|length }} alerts</span></div>
+    {% if low_stock_phones %}<div class="alert-list">{% for phone in low_stock_phones %}<div class="alert-item"><div class="alert-icon">!</div><div class="alert-info"><strong>{{ phone.name }}</strong><small>Only {{ phone.quantity }} units remaining</small></div><a class="text-link" href="{{ url_for('restock_phone',phone_id=phone.id) }}">Restock</a></div>{% endfor %}</div>
+    {% else %}<div class="empty-state"><div class="empty-icon">✓</div><strong>All clear!</strong><p>No low-stock items.</p></div>{% endif %}
+  </article>
+</section>
+<section class="panel inventory-panel" id="inventory"><div class="section-heading"><div><h3>Inventory Overview</h3><p>Manage your store products.</p></div><a href="{{ url_for('add_phone') }}">＋ Add Product</a></div>
+  <form class="table-tools" method="get" action="{{ url_for('dashboard') }}#inventory"><input name="q" placeholder="Search products…" value="{{ search }}"><select name="stock" aria-label="Stock filter"><option value="all" {% if stock_filter == 'all' %}selected{% endif %}>All stock</option><option value="low" {% if stock_filter == 'low' %}selected{% endif %}>Low stock</option><option value="available" {% if stock_filter == 'available' %}selected{% endif %}>Available</option></select><select name="sort" aria-label="Sort products"><option value="newest" {% if sort_key == 'newest' %}selected{% endif %}>Newest</option><option value="name" {% if sort_key == 'name' %}selected{% endif %}>Name A–Z</option><option value="price_high" {% if sort_key == 'price_high' %}selected{% endif %}>Price high–low</option><option value="price_low" {% if sort_key == 'price_low' %}selected{% endif %}>Price low–high</option><option value="quantity" {% if sort_key == 'quantity' %}selected{% endif %}>Lowest stock</option><option value="value" {% if sort_key == 'value' %}selected{% endif %}>Highest stock value</option></select><button class="btn-secondary" type="submit">Apply</button></form>
+  <div class="table-wrapper"><table class="inventory-table"><thead><tr><th>Product</th><th>Sale Price</th><th>Cost</th><th>Quantity</th><th>Stock Value</th><th>Status</th><th>Actions</th></tr></thead><tbody>
+    {% for phone in phones %}
+  <tr><td><strong>{{ phone.name }}</strong></td><td>{{ "{:,.0f}".format(phone.price) }} Toman</td><td>{% if phone.cost_known %}{{ "{:,.0f}".format(phone.cost_price) }} Toman{% else %}<span class="form-hint">Unknown</span>{% endif %}</td><td>{{ phone.quantity }}</td><td>{{ "{:,.0f}".format(phone.price*phone.quantity) }} Toman</td><td>{% if phone.quantity <= threshold %}<span class="stock-badge low">Low Stock</span>{% else %}<span class="stock-badge available">Available</span>{% endif %}</td><td class="actions-cell"><a class="edit-button" href="{{ url_for('edit_phone',phone_id=phone.id) }}">Edit</a><a class="edit-button" href="{{ url_for('sell_phone',phone_id=phone.id) }}">Sell</a><a class="edit-button" href="{{ url_for('restock_phone',phone_id=phone.id) }}">Restock</a><a class="delete-icon-button" href="{{ url_for('delete_phone',phone_id=phone.id) }}" aria-label="Delete {{ phone.name }}">×</a></td></tr>
+  {% else %}<tr><td colspan="7" class="empty-table">No products match your search.</td></tr>{% endfor %}
+  </tbody></table></div>
+</section>
+<section class="panel activity-panel"><div class="section-heading"><div><h3>Recent Activity</h3><p>Latest store operations.</p></div><a href="{{ url_for('activity') }}">View all →</a></div>
+  {% if recent_activity %}<div class="activity-list">{% for item in recent_activity %}<div class="activity-row"><span class="activity-dot"></span><div><strong>{{ item.action }}</strong><small>{{ item.details }}</small></div><time>{{ item.created_at }}</time></div>{% endfor %}</div>{% else %}<div class="activity-empty">No activity recorded yet.</div>{% endif %}
+</section>
+{% endblock %}

@@ -1,0 +1,8 @@
+{% extends "base.html" %}
+{% block title %}Settings · Phone Store Manager{% endblock %}
+{% block content %}
+<header class="topbar"><div><p class="eyebrow">PREFERENCES</p><h1>Settings</h1><p class="subtitle">Configure inventory alerts.</p></div></header>
+<section class="panel form-panel"><form method="post"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+<div class="form-group"><label for="low_stock_limit">Low-stock alert threshold</label><input id="low_stock_limit" name="low_stock_limit" type="number" min="0" max="100000" step="1" value="{{ threshold }}" required><small class="form-hint">Products at or below this quantity appear in Smart Alerts.</small></div>
+<div class="form-actions"><button class="btn-primary" type="submit">Save Settings</button></div></form></section>
+{% endblock %}

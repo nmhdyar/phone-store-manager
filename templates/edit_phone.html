@@ -1,0 +1,15 @@
+{% extends "base.html" %}
+{% block title %}Edit Product · Phone Store Manager{% endblock %}
+{% block content %}
+<header class="topbar"><div><p class="eyebrow">INVENTORY</p><h1>Edit Product</h1><p class="subtitle">Update product details and pricing.</p></div><a class="text-link" href="{{ url_for('dashboard') }}">← Dashboard</a></header>
+<section class="panel form-panel"><form method="post">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+  <div class="form-group"><label for="name">Product name</label><input id="name" name="name" maxlength="120" value="{{ request.form.get('name',phone.name) }}" required></div>
+  <div class="form-row">
+    <div class="form-group"><label for="price">Selling price (Toman)</label><input type="number" id="price" name="price" min="0.01" step="any" value="{{ request.form.get('price',phone.price) }}" required></div>
+    <div class="form-group"><label for="cost_price">Purchase cost (Toman · optional)</label><input type="number" id="cost_price" name="cost_price" min="0" step="any" value="{{ request.form.get('cost_price', phone.cost_price if phone.cost_known else '') }}" placeholder="Leave blank if unknown"></div>
+  </div>
+  <div class="form-group"><label for="quantity">Quantity</label><input type="number" id="quantity" name="quantity" min="0" step="1" value="{{ request.form.get('quantity',phone.quantity) }}" required></div>
+  <div class="form-actions"><a class="btn-secondary" href="{{ url_for('dashboard') }}">Cancel</a><button class="btn-primary" type="submit">Save Changes</button></div>
+</form></section>
+{% endblock %}

@@ -1,0 +1,7 @@
+{% extends "base.html" %}
+{% block title %}Activity · Phone Store Manager{% endblock %}
+{% block content %}
+<header class="topbar"><div><p class="eyebrow">AUDIT TRAIL</p><h1>Activity</h1><p class="subtitle">A record of inventory and store operations.</p></div></header>
+<section class="panel"><div class="section-heading"><div><h3>Recent Operations</h3><p>Latest 300 activity events.</p></div></div>
+{% if activities %}<div class="activity-list">{% for item in activities %}<div class="activity-row"><span class="activity-dot"></span><div><strong>{{ item.action }}</strong><small>{{ item.details }}</small></div><time>{{ item.created_at }}</time></div>{% endfor %}</div>{% else %}<div class="activity-empty">No activity recorded yet.</div>{% endif %}</section>
+{% endblock %}
