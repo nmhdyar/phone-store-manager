@@ -237,9 +237,8 @@ def sell_phone(phone_id):
             quantity = parse_quantity(request.form.get("quantity"), allow_zero=False)
             unit_price = parse_money(request.form.get("unit_price"))
             with get_connection() as connection:
-                current = connection.execute("SELECT * FROM phones WHERE id=?", (phone_id,)).fetchone()
-                if current is None:
-                    abort(404)
+                # Acquire the write lock with a conditional update before reading the
+                # cost snapshot. This prevents two simultaneous sales overselling stock.
                 update = connection.execute(
                     "UPDATE phones SET quantity=quantity-? WHERE id=? AND quantity>=?",
                     (quantity, phone_id, quantity),
@@ -251,6 +250,10 @@ def sell_phone(phone_id):
                     if available is None:
                         abort(404)
                     raise ValueError(f"Only {available['quantity']} units are available.")
+                current = connection.execute(
+                    "SELECT name, cost_price, cost_known FROM phones WHERE id=?",
+                    (phone_id,),
+                ).fetchone()
                 total = float((Decimal(str(unit_price)) * quantity).quantize(Decimal("0.01")))
                 profit = (
                     float(((Decimal(str(unit_price)) - Decimal(str(current["cost_price"]))) * quantity).quantize(Decimal("0.01")))
