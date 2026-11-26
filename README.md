@@ -55,6 +55,17 @@ If PowerShell blocks virtual-environment activation, run the environment's inter
 .\.venv\Scripts\python.exe app.py
 ```
 
+## Quality checks
+
+Run the automated regression suite from the project directory:
+
+```powershell
+python -m compileall -q app.py database.py tests
+python -m unittest discover -s tests -v
+```
+
+GitHub Actions runs the same checks on Python 3.11, 3.12, and 3.13 for pushes and pull requests to `main`.
+
 ## Project structure
 
 ```text
@@ -62,6 +73,8 @@ web_app/
 ├── app.py                 # Flask routes and application logic
 ├── database.py            # SQLite setup, migrations, and connections
 ├── requirements.txt       # Python dependencies
+├── tests/                  # Automated regression tests
+├── .github/workflows/      # Continuous integration checks
 ├── phone_store.db         # Created locally on first run (not committed)
 ├── instance/              # Local Flask signing key (not committed)
 ├── static/

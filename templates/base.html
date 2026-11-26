@@ -3,10 +3,13 @@
 <head>
   <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
   <meta name="theme-color" content="#0c0e14">
+  <meta name="description" content="A local-first inventory and sales dashboard for independent phone stores.">
+  <meta name="color-scheme" content="dark">
   <title>{% block title %}Phone Store Manager{% endblock %}</title>
   <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
 </head>
 <body>
+<a class="skip-link" href="#main-content">Skip to content</a>
 <div class="app-layout">
   <aside class="sidebar">
     <a class="brand" href="{{ url_for('dashboard') }}"><span class="brand-icon">P</span><span>Phone<span class="brand-light">Store</span></span></a>
@@ -21,7 +24,7 @@
     <nav><a class="nav-item {% if request.endpoint == 'settings' %}active{% endif %}" href="{{ url_for('settings') }}">⚙ Settings</a></nav>
     <div class="sidebar-footer"><div class="avatar">N</div><div><strong>Store Admin</strong><small>Local workspace</small></div></div>
   </aside>
-  <main class="main-content">
+  <main class="main-content" id="main-content">
     {% with messages = get_flashed_messages(with_categories=true) %}
       {% if messages %}<div class="flash-stack">{% for category,message in messages %}<div class="flash {{ category }}" role="status">{{ message }}</div>{% endfor %}</div>{% endif %}
     {% endwith %}

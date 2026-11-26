@@ -1,7 +1,6 @@
-from decimal import Decimal, InvalidOperation
+from decimal import Decimal, InvalidOperation, ROUND_HALF_UP
 import os
 import secrets
-import math
 from pathlib import Path
 import sqlite3
 
@@ -24,9 +23,28 @@ app.config.update(
     SESSION_COOKIE_HTTPONLY=True,
     SESSION_COOKIE_SAMESITE="Lax",
     SESSION_COOKIE_SECURE=os.environ.get("PHONE_STORE_HTTPS", "0") == "1",
+    PERMANENT_SESSION_LIFETIME=60 * 60 * 8,
     MAX_CONTENT_LENGTH=1 * 1024 * 1024,
 )
 CSRFProtect(app)
+
+MAX_MONEY = Decimal("999999999999.99")
+MAX_QUANTITY = 2_147_483_647
+
+
+@app.after_request
+def add_security_headers(response):
+    response.headers.setdefault("X-Content-Type-Options", "nosniff")
+    response.headers.setdefault("X-Frame-Options", "DENY")
+    response.headers.setdefault("Referrer-Policy", "strict-origin-when-cross-origin")
+    response.headers.setdefault("Permissions-Policy", "camera=(), microphone=(), geolocation=()")
+    response.headers.setdefault(
+        "Content-Security-Policy",
+        "default-src 'self'; base-uri 'self'; object-src 'none'; frame-ancestors 'none'; "
+        "form-action 'self'; img-src 'self' data:; style-src 'self' https://fonts.googleapis.com; "
+        "font-src 'self' https://fonts.gstatic.com",
+    )
+    return response
 initialize_database()
 
 
@@ -37,10 +55,13 @@ def parse_money(value, *, allow_zero=False):
         raise ValueError("Enter a valid amount.")
     if not amount.is_finite() or amount < 0 or (not allow_zero and amount == 0):
         raise ValueError("Amount must be a finite positive number.")
-    result = float(amount)
-    if not math.isfinite(result):
+    try:
+        amount = amount.quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
+    except InvalidOperation:
         raise ValueError("Amount is outside the supported range.")
-    return result
+    if amount > MAX_MONEY:
+        raise ValueError("Amount exceeds the supported limit.")
+    return float(amount)
 
 
 def parse_quantity(value, *, allow_zero=True):
@@ -48,7 +69,7 @@ def parse_quantity(value, *, allow_zero=True):
         number = int(str(value).strip())
     except (ValueError, TypeError, AttributeError):
         raise ValueError("Quantity must be a whole number.")
-    if number < 0 or (not allow_zero and number == 0):
+    if number < 0 or (not allow_zero and number == 0) or number > MAX_QUANTITY:
         raise ValueError("Quantity is outside the allowed range.")
     return number
 
@@ -147,7 +168,7 @@ def add_phone():
             cost_price = parse_money(raw_cost, allow_zero=True) if raw_cost else None
             quantity = parse_quantity(request.form.get("quantity"))
             if not name or len(name) > 120:
-                raise ValueError("Name is required and must be under 120 characters.")
+                raise ValueError("Name is required and must be no longer than 120 characters.")
             with get_connection() as connection:
                 connection.execute(
                     "INSERT INTO phones(name, price, cost_price, cost_known, quantity) VALUES (?, ?, ?, ?, ?)",
@@ -174,7 +195,7 @@ def edit_phone(phone_id):
             cost_price = parse_money(raw_cost, allow_zero=True) if raw_cost else None
             quantity = parse_quantity(request.form.get("quantity"))
             if not name or len(name) > 120:
-                raise ValueError("Name is required and must be under 120 characters.")
+                raise ValueError("Name is required and must be no longer than 120 characters.")
             with get_connection() as connection:
                 if cost_price is None:
                     connection.execute(
@@ -219,11 +240,22 @@ def sell_phone(phone_id):
                 current = connection.execute("SELECT * FROM phones WHERE id=?", (phone_id,)).fetchone()
                 if current is None:
                     abort(404)
-                if quantity > current["quantity"]:
-                    raise ValueError(f"Only {current['quantity']} units are available.")
-                connection.execute("UPDATE phones SET quantity=quantity-? WHERE id=?", (quantity, phone_id))
-                total = round(unit_price * quantity, 2)
-                profit = round((unit_price - current["cost_price"]) * quantity, 2) if current["cost_known"] else None
+                update = connection.execute(
+                    "UPDATE phones SET quantity=quantity-? WHERE id=? AND quantity>=?",
+                    (quantity, phone_id, quantity),
+                )
+                if update.rowcount != 1:
+                    available = connection.execute(
+                        "SELECT quantity FROM phones WHERE id=?", (phone_id,)
+                    ).fetchone()
+                    if available is None:
+                        abort(404)
+                    raise ValueError(f"Only {available['quantity']} units are available.")
+                total = float((Decimal(str(unit_price)) * quantity).quantize(Decimal("0.01")))
+                profit = (
+                    float(((Decimal(str(unit_price)) - Decimal(str(current["cost_price"]))) * quantity).quantize(Decimal("0.01")))
+                    if current["cost_known"] else None
+                )
                 connection.execute(
                     "INSERT INTO sales(phone_id, phone_name, quantity, unit_price, unit_cost, total, profit) "
                     "VALUES (?, ?, ?, ?, ?, ?, ?)",
@@ -244,7 +276,17 @@ def restock_phone(phone_id):
         try:
             quantity = parse_quantity(request.form.get("quantity"), allow_zero=False)
             with get_connection() as connection:
-                connection.execute("UPDATE phones SET quantity=quantity+? WHERE id=?", (quantity, phone_id))
+                update = connection.execute(
+                    "UPDATE phones SET quantity=quantity+? WHERE id=? AND quantity<=?",
+                    (quantity, phone_id, MAX_QUANTITY - quantity),
+                )
+                if update.rowcount != 1:
+                    current = connection.execute(
+                        "SELECT quantity FROM phones WHERE id=?", (phone_id,)
+                    ).fetchone()
+                    if current is None:
+                        abort(404)
+                    raise ValueError("The resulting stock quantity would exceed the supported limit.")
                 log_activity(connection, "Stock replenished", f"{quantity} units added to {phone['name']}.")
             flash("Inventory restocked.", "success")
             return redirect(url_for("dashboard"))

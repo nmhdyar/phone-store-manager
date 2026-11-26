@@ -10,7 +10,7 @@
 </section>
 <section class="stats-grid stats-secondary">
   <article class="stat-card"><div class="stat-top"><span>Today's Revenue</span><span class="stat-icon green">↗</span></div><h2>{{ "{:,.0f}".format(sales_today.revenue) }}</h2><p class="stat-note">Toman · {{ sales_today.count }} transactions today</p></article>
-  <article class="stat-card"><div class="stat-top"><span>Today's Gross Profit</span><span class="stat-icon purple">◆</span></div><h2>{{ "{:,.0f}".format(sales_today.profit) }}</h2><p class="stat-note">Toman · Excludes sales with unknown cost</p></article>
+  <article class="stat-card"><div class="stat-top"><span>Today's Gross Profit (known cost)</span><span class="stat-icon purple">◆</span></div><h2>{{ "{:,.0f}".format(sales_today.profit) }}</h2><p class="stat-note">Toman · Excludes sales with unknown cost</p></article>
 </section>
 <section class="content-grid">
   <article class="panel"><div class="section-heading"><div><h3>Quick Actions</h3><p>Common tasks, one click away.</p></div></div>
