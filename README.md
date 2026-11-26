@@ -1,54 +1,91 @@
 # Phone Store Manager
 
-A local Flask + SQLite inventory and sales manager.
+A local inventory and sales management web application built with Flask and SQLite. It provides a compact dashboard for tracking products, stock levels, sales, revenue, and gross profit.
 
 ## Features
 
-- Dashboard with inventory KPIs, today's revenue, and low-stock alerts
-- Product create, edit, delete, search, and stock management
-- Sales transactions that atomically decrement inventory
-- Sales history with revenue and gross-profit reporting
-- Activity log for product, stock, sales, and settings changes
-- Configurable low-stock threshold
-- Input validation, parameterized SQL, CSRF protection, and safe local defaults
-- Database migration adds purchase-cost tracking without deleting existing products
+- **Dashboard:** inventory KPIs, today's revenue, gross profit, and low-stock alerts.
+- **Inventory:** create, edit, delete, search, filter, sort, sell, and restock products.
+- **Sales tracking:** transaction history with revenue and gross-profit reporting.
+- **Activity log:** records product, stock, sales, and settings changes.
+- **Store settings:** configurable low-stock alert threshold.
+- **Data integrity:** parameterized SQL, input validation, database transactions, and foreign-key enforcement.
+- **Security basics:** CSRF protection, HTTP-only session cookies, and a locally generated signing key.
+- **Database migration:** adds purchase-cost tracking while preserving existing product records.
 
-## Requirements
+## Tech stack
 
-- Windows 10/11
-- Python 3.11 or newer
+- Python 3.11+
+- Flask 3.1
+- Flask-WTF (CSRF protection)
+- SQLite
+- HTML and CSS
 
-## Setup (PowerShell)
+## Getting started
 
-From this folder:
+### 1. Create and activate a virtual environment
+
+Run these commands in PowerShell from this directory:
 
 ```powershell
-py -3.13 -m venv .venv
+py -3.11 -m venv .venv
 .\.venv\Scripts\Activate.ps1
+```
+
+If you have a newer supported Python version installed, you can replace `3.11` with that version.
+
+### 2. Install dependencies
+
+```powershell
 python -m pip install --upgrade pip
 python -m pip install -r requirements.txt
+```
+
+### 3. Start the application
+
+```powershell
 python app.py
 ```
 
-Open http://127.0.0.1:5000
+Open **http://127.0.0.1:5000** in your browser.
 
-If PowerShell blocks environment activation, run the interpreter directly:
+If PowerShell blocks virtual-environment activation, run the environment's interpreter directly:
 
 ```powershell
 .\.venv\Scripts\python.exe app.py
 ```
 
-## Data and backups
+## Project structure
 
-- SQLite data is stored in `phone_store.db`.
-- Flask's signing key is generated in `instance\secret_key`; keep it private and do not delete it while sessions are in use.
-- Before making manual database changes, stop the app and copy `phone_store.db`.
-- The app binds to `127.0.0.1` by default. It is not configured for public internet deployment or multi-user authentication.
+```text
+web_app/
+├── app.py                 # Flask routes and application logic
+├── database.py            # SQLite setup, migrations, and connections
+├── requirements.txt       # Python dependencies
+├── phone_store.db         # Created locally on first run (not committed)
+├── instance/              # Local Flask signing key (not committed)
+├── static/
+│   └── css/style.css      # Application styles
+└── templates/             # Jinja2 pages
+```
+
+## Data, configuration, and security
+
+- The SQLite database is created locally as `phone_store.db`.
+- The Flask signing key is generated in `instance/secret_key` on first run. Keep this file private and back it up securely if you need to preserve active sessions.
+- You can provide a signing key through the `PHONE_STORE_SECRET_KEY` environment variable.
+- Set `PHONE_STORE_HTTPS=1` when serving the app over HTTPS so session cookies use the `Secure` attribute.
+- The development server binds to `127.0.0.1` and is intended for local use. The project is **not configured for public internet deployment or multi-user authentication**.
+- Local databases, signing keys, virtual environments, and environment files are excluded by `.gitignore`.
 
 ## Purchase cost and profit
 
-Purchase cost is optional when adding a product. Existing products are migrated with an **unknown** cost, not a fabricated zero cost. Sales for those products still record revenue and stock movement, but profit is marked unavailable until a purchase cost is entered on the Edit Product page. Historical sales retain the cost snapshot used at the time of sale.
+Purchase cost is optional when creating a product. Existing products are migrated with an **unknown** cost rather than an assumed zero cost. Revenue and stock movement are still recorded for those products, while gross profit remains unavailable until a purchase cost is entered. Each sale stores a snapshot of the unit cost used at the time of the transaction.
 
-## Legacy JSON
+## Legacy data import
 
-When the SQLite database is empty, the app can import valid records from the older `phonestore\phones.json` file. It does not merge that file into a non-empty database.
+If the SQLite database is empty, the application can import valid product records from the older `phonestore/phones.json` file located one directory above this application. It does not merge legacy JSON records into a non-empty database.
+
+## Backups
+
+Stop the application before making a manual database backup, then copy `phone_store.db` to a secure location. Do not commit the database or the `instance/` directory to version control.
